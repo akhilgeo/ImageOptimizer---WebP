@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Image Optimizer & Converter</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            padding: 40px 20px;
+            color: #1a1a1a;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .header h1 {
+            font-size: 36px;
+            font-weight: 600;
+            margin-bottom: 12px;
+            color: #1a1a1a;
+        }
+
+        .header p {
+            color: #6b7280;
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        .drop-zone {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 60px 20px;
+            text-align: center;
+            background: #fafafa;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 40px;
+        }
+
+        .drop-zone:hover {
+            border-color: #9ca3af;
+            background: #f5f5f5;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #1a1a1a;
+            background: #f0f0f0;
+        }
+
+        .drop-zone-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.4;
+        }
+
+        .drop-zone h3 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        .drop-zone p {
+            color: #6b7280;
+            font-size: 14px;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .control-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+            font-size: 14px;
+        }
+
+        .control-group select,
+        .control-group input[type="range"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 15px;
+            background: #ffffff;
+            color: #1a1a1a;
+        }
+
+        .control-group select:focus,
+        .control-group input[type="range"]:focus {
+            outline: none;
+            border-color: #1a1a1a;
+        }
+
+        .control-group input[type="range"] {
+            padding: 0;
+            height: 40px;
+            cursor: pointer;
+        }
+
+        .quality-value {
+            display: inline-block;
+            margin-left: 8px;
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        .file-list {
+            margin-bottom: 32px;
+        }
+
+        .file-item {
+            background: #fafafa;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #f0f0f0;
+        }
+
+        .file-name {
+            font-weight: 400;
+            color: #1a1a1a;
+            font-size: 14px;
+        }
+
+        .file-size {
+            color: #6b7280;
+            font-size: 13px;
+        }
+
+        .stats {
+            background: #fafafa;
+            padding: 24px;
+            border-radius: 12px;
+            margin-bottom: 32px;
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+            text-align: center;
+            border: 1px solid #f0f0f0;
+        }
+
+        .stat-item h4 {
+            font-size: 13px;
+            font-weight: 500;
+            color: #6b7280;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-item p {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: #1a1a1a;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #000000;
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f5f5f5;
+            color: #1a1a1a;
+            border: 1px solid #e5e7eb;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .progress {
+            margin: 24px 0;
+            display: none;
+        }
+
+        .progress.active {
+            display: block;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: #1a1a1a;
+            width: 0%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .progress-text {
+            text-align: center;
+            margin-top: 8px;
+            font-size: 13px;
+            color: #6b7280;
+            font-weight: 500;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        @media (max-width: 640px) {
+            .controls {
+                grid-template-columns: 1fr;
+            }
+            
+            .stats {
+                grid-template-columns: 1fr;
+            }
+            
+            .buttons {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Image Optimizer</h1>
+            <p>Convert and compress images for faster loading</p>
+        </div>
+
+        <div class="drop-zone" id="dropZone">
+            <div class="drop-zone-icon">📁</div>
+            <h3>Drop images here or click to browse</h3>
+            <p>Supports PNG, JPG, and GIF files</p>
+            <input type="file" id="fileInput" multiple accept="image/png,image/jpeg,image/jpg,image/gif" style="display: none;">
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label>Output Format</label>
+                <select id="formatSelect">
+                    <option value="webp">WebP</option>
+                    <option value="jpeg">JPG</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>
+                    Quality
+                    <span class="quality-value" id="qualityValue">85%</span>
+                </label>
+                <input type="range" id="qualitySlider" min="10" max="100" value="85">
+            </div>
+        </div>
+
+        <div class="file-list hidden" id="fileList"></div>
+
+        <div class="stats hidden" id="stats">
+            <div class="stat-item">
+                <h4>Original</h4>
+                <p id="originalSize">0 MB</p>
+            </div>
+            <div class="stat-item">
+                <h4>Compressed</h4>
+                <p id="compressedSize">0 MB</p>
+            </div>
+            <div class="stat-item">
+                <h4>Saved</h4>
+                <p id="savedSize">0%</p>
+            </div>
+        </div>
+
+        <div class="progress" id="progress">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText">Processing...</div>
+        </div>
+
+        <div class="buttons">
+            <button class="btn-primary" id="convertBtn" disabled>
+                <span>Convert Images</span>
+            </button>
+            <button class="btn-primary hidden" id="downloadBtn">
+                <span>Download ZIP</span>
+            </button>
+            <button class="btn-secondary hidden" id="resetBtn">
+                <span>Start Over</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const fileList = document.getElementById('fileList');
+        const formatSelect = document.getElementById('formatSelect');
+        const qualitySlider = document.getElementById('qualitySlider');
+        const qualityValue = document.getElementById('qualityValue');
+        const convertBtn = document.getElementById('convertBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const progress = document.getElementById('progress');
+        const progressFill = document.getElementById('progressFill');
+        const progressText = document.getElementById('progressText');
+        const stats = document.getElementById('stats');
+        const originalSizeEl = document.getElementById('originalSize');
+        const compressedSizeEl = document.getElementById('compressedSize');
+        const savedSizeEl = document.getElementById('savedSize');
+
+        let selectedFiles = [];
+        let convertedBlobs = [];
+
+        dropZone.addEventListener('click', () => fileInput.click());
+        dropZone.addEventListener('dragover', handleDragOver);
+        dropZone.addEventListener('dragleave', handleDragLeave);
+        dropZone.addEventListener('drop', handleDrop);
+        fileInput.addEventListener('change', handleFileSelect);
+        qualitySlider.addEventListener('input', updateQualityValue);
+        convertBtn.addEventListener('click', convertImages);
+        downloadBtn.addEventListener('click', downloadZip);
+        resetBtn.addEventListener('click', reset);
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            const files = Array.from(e.dataTransfer.files).filter(file => 
+                file.type.match(/image\/(png|jpeg|jpg|gif)/)
+            );
+            processFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = Array.from(e.target.files).filter(file => 
+                file.type.match(/image\/(png|jpeg|jpg|gif)/)
+            );
+            processFiles(files);
+        }
+
+        function processFiles(files) {
+            selectedFiles = files;
+            displayFiles();
+            convertBtn.disabled = files.length === 0;
+        }
+
+        function displayFiles() {
+            fileList.innerHTML = '';
+            fileList.classList.remove('hidden');
+            
+            selectedFiles.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'file-item';
+                item.innerHTML = `
+                    <span class="file-name">${file.name}</span>
+                    <span class="file-size">${formatBytes(file.size)}</span>
+                `;
+                fileList.appendChild(item);
+            });
+        }
+
+        function updateQualityValue() {
+            qualityValue.textContent = qualitySlider.value + '%';
+        }
+
+        async function convertImages() {
+            convertBtn.disabled = true;
+            progress.classList.add('active');
+            convertedBlobs = [];
+            
+            const outputFormat = formatSelect.value;
+            const quality = qualitySlider.value / 100;
+            
+            let totalOriginalSize = 0;
+            let totalCompressedSize = 0;
+
+            for (let i = 0; i < selectedFiles.length; i++) {
+                const file = selectedFiles[i];
+                totalOriginalSize += file.size;
+                
+                const blob = await convertImage(file, outputFormat, quality);
+                convertedBlobs.push({
+                    blob,
+                    name: getNewFileName(file.name, outputFormat)
+                });
+                
+                totalCompressedSize += blob.size;
+                
+                const progressPercent = Math.round(((i + 1) / selectedFiles.length) * 100);
+                progressFill.style.width = progressPercent + '%';
+                progressText.textContent = `Processing ${i + 1} of ${selectedFiles.length}...`;
+            }
+
+            displayStats(totalOriginalSize, totalCompressedSize);
+            progress.classList.remove('active');
+            downloadBtn.classList.remove('hidden');
+            resetBtn.classList.remove('hidden');
+            convertBtn.classList.add('hidden');
+        }
+
+        function convertImage(file, format, quality) {
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+
+                        canvas.toBlob(
+                            (blob) => resolve(blob),
+                            format === 'webp' ? 'image/webp' : 'image/jpeg',
+                            quality
+                        );
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function getNewFileName(originalName, format) {
+            const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
+            const extension = format === 'webp' ? 'webp' : 'jpg';
+            return `${nameWithoutExt}.${extension}`;
+        }
+
+        function displayStats(originalSize, compressedSize) {
+            stats.classList.remove('hidden');
+            originalSizeEl.textContent = formatBytes(originalSize);
+            compressedSizeEl.textContent = formatBytes(compressedSize);
+            
+            const saved = ((originalSize - compressedSize) / originalSize * 100).toFixed(1);
+            savedSizeEl.textContent = saved + '%';
+        }
+
+        async function downloadZip() {
+            const zip = new JSZip();
+            
+            convertedBlobs.forEach(item => {
+                zip.file(item.name, item.blob);
+            });
+
+            const content = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(content);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'optimized-images.zip';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function reset() {
+            selectedFiles = [];
+            convertedBlobs = [];
+            fileInput.value = '';
+            fileList.innerHTML = '';
+            fileList.classList.add('hidden');
+            stats.classList.add('hidden');
+            downloadBtn.classList.add('hidden');
+            resetBtn.classList.add('hidden');
+            convertBtn.classList.remove('hidden');
+            convertBtn.disabled = true;
+            progressFill.style.width = '0%';
+            progressText.textContent = 'Processing...';
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+        }
+    </script>
+</body>
+</html>
